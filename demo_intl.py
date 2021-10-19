@@ -216,8 +216,10 @@ secm = secm[['gvkey', 'exchg', 'loc', 'fic', 'iid', 'datadate',
              'cshoc', 'prccd', 'me', 'retm', 'jdate']]
 
 
-fqsm = pd.merge(secm, fundq, how='left', on=['gvkey','jdate','exchg','loc','fic'])
-# fqsm = pd.merge(secm, fundq, how='right', on=['gvkey','jdate','exchg','loc','fic'])
+# fqsm = pd.merge(secm, fundq, how='left', on=['gvkey','jdate','exchg','loc','fic'])
+fqsm = pd.merge(secm, fundq, how='right', on=['gvkey','jdate','exchg','loc','fic'])
+############### actually below is fqsq #############
+fqsm = fqsm.dropna(subset=['seqq'])
 
 
 # # Forward Fill the Fundq info to Empty Month
@@ -272,9 +274,9 @@ def ttm4(series, df):
     :return: ttm4
     """
     lag = pd.DataFrame()
-    for i in range(3,10,3):
+    for i in range(1,4):
         lag['%(series)s%(lag)s' % {'series': series, 'lag': i}] = df.groupby('gvkey')['%s' % series].shift(i)
-    result = df['%s' % series] + lag['%s3' % series] + lag['%s6' % series] + lag['%s9' % series]
+    result = df['%s' % series] + lag['%s1' % series] + lag['%s2' % series] + lag['%s3' % series]
     return result
 # changes from accounting_60.py: shift(3), shift(6), shift(9)
 
@@ -288,7 +290,9 @@ def ttm12(series, df):
     lag = pd.DataFrame()
     for i in range(1, 12):
         lag['%(series)s%(lag)s' % {'series': series, 'lag': i}] = df.groupby('gvkey')['%s' % series].shift(i)
-    result = df['%s' % series] + lag['%s1' % series] + lag['%s2' % series] + lag['%s3' % series] +             lag['%s4' % series] + lag['%s5' % series] + lag['%s6' % series] + lag['%s7' % series] +             lag['%s8' % series] + lag['%s9' % series] + lag['%s10' % series] + lag['%s11' % series]
+    result = df['%s' % series] + lag['%s1' % series] + lag['%s2' % series] + lag['%s3' % series] + \
+                lag['%s4' % series] + lag['%s5' % series] + lag['%s6' % series] + lag['%s7' % series] + \
+                            lag['%s8' % series] + lag['%s9' % series] + lag['%s10' % series] + lag['%s11' % series]
     return result
 
 
@@ -311,7 +315,7 @@ fqsm['cp'] = fqsm['cf']/fqsm['me']
 
 
 # agr
-fqsm['atq_l4'] = fqsm.groupby('gvkey')['atq'].shift(12)
+fqsm['atq_l4'] = fqsm.groupby('gvkey')['atq'].shift(4)
 fqsm['agr'] = (fqsm['atq'] - fqsm['atq_l4']) / fqsm['atq_l4']
 
 
@@ -325,7 +329,7 @@ fqsm['alm'] = fqsm['ala']/(fqsm['atq']+fqsm['me']-fqsm['ceqq'])
 
 # ato
 fqsm['noa'] = (fqsm['atq']-fqsm['cheq']-fqsm['ivaoq'])-                 (fqsm['atq']-fqsm['dlcq']-fqsm['dlttq']-fqsm['mibq']-fqsm['pstkq']-fqsm['ceqq'])/fqsm['atq_l4']
-fqsm['noa_l4'] = fqsm.groupby(['gvkey'])['noa'].shift(12)
+fqsm['noa_l4'] = fqsm.groupby(['gvkey'])['noa'].shift(4)
 fqsm['ato'] = fqsm['saleq']/fqsm['noa_l4']
 
 
@@ -339,7 +343,7 @@ fqsm['cash'] = fqsm['cheq']/fqsm['atq']
 
 
 # cashdebt
-fqsm['ltq_l4'] = fqsm.groupby(['gvkey'])['ltq'].shift(12)
+fqsm['ltq_l4'] = fqsm.groupby(['gvkey'])['ltq'].shift(4)
 fqsm['cashdebt'] = (ttm4('ibq', fqsm) + ttm4('dpq', fqsm))/((fqsm['ltq']+fqsm['ltq_l4'])/2)
 
 
@@ -348,27 +352,27 @@ fqsm['cashdebt'] = (ttm4('ibq', fqsm) + ttm4('dpq', fqsm))/((fqsm['ltq']+fqsm['l
 fqsm['ibq4'] = ttm4('ibq', fqsm)
 fqsm['saleq4'] = ttm4('saleq', fqsm)
 fqsm['saleq4'] = np.where(fqsm['saleq4'].isnull(), fqsm['saley'], fqsm['saleq4'])
-fqsm['ibq4_l1'] = fqsm.groupby(['gvkey'])['ibq4'].shift(3)
-fqsm['saleq4_l1'] = fqsm.groupby(['gvkey'])['saleq4'].shift(3)
+fqsm['ibq4_l1'] = fqsm.groupby(['gvkey'])['ibq4'].shift(1)
+fqsm['saleq4_l1'] = fqsm.groupby(['gvkey'])['saleq4'].shift(1)
 fqsm['chpm'] = (fqsm['ibq4']/fqsm['saleq4'])-(fqsm['ibq4_l1']/fqsm['saleq4_l1'])
 
 
 
 #chtx
-fqsm['txtq_l4'] = fqsm.groupby(['gvkey'])['txtq'].shift(12)
-fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(12)
+fqsm['txtq_l4'] = fqsm.groupby(['gvkey'])['txtq'].shift(4)
+fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(4)
 fqsm['chtx'] = (fqsm['txtq']-fqsm['txtq_l4'])/fqsm['atq_l4']
 
 
 
 #cinvest
-fqsm['ppentq_l1'] = fqsm.groupby(['gvkey'])['ppentq'].shift(3)
-fqsm['ppentq_l2'] = fqsm.groupby(['gvkey'])['ppentq'].shift(6)
-fqsm['ppentq_l3'] = fqsm.groupby(['gvkey'])['ppentq'].shift(9)
-fqsm['ppentq_l4'] = fqsm.groupby(['gvkey'])['ppentq'].shift(12)
-fqsm['saleq_l1'] = fqsm.groupby(['gvkey'])['saleq'].shift(3)
-fqsm['saleq_l2'] = fqsm.groupby(['gvkey'])['saleq'].shift(6)
-fqsm['saleq_l3'] = fqsm.groupby(['gvkey'])['saleq'].shift(9)
+fqsm['ppentq_l1'] = fqsm.groupby(['gvkey'])['ppentq'].shift(1)
+fqsm['ppentq_l2'] = fqsm.groupby(['gvkey'])['ppentq'].shift(2)
+fqsm['ppentq_l3'] = fqsm.groupby(['gvkey'])['ppentq'].shift(3)
+fqsm['ppentq_l4'] = fqsm.groupby(['gvkey'])['ppentq'].shift(4)
+fqsm['saleq_l1'] = fqsm.groupby(['gvkey'])['saleq'].shift(1)
+fqsm['saleq_l2'] = fqsm.groupby(['gvkey'])['saleq'].shift(2)
+fqsm['saleq_l3'] = fqsm.groupby(['gvkey'])['saleq'].shift(3)
 
 fqsm['c_temp1'] = (fqsm['ppentq_l1'] - fqsm['ppentq_l2']) / fqsm['saleq_l1']
 fqsm['c_temp2'] = (fqsm['ppentq_l2'] - fqsm['ppentq_l3']) / fqsm['saleq_l2']
@@ -396,20 +400,20 @@ fqsm['depr'] = ttm4('dpq', fqsm)/fqsm['ppentq']
 #gma
 fqsm['revtq4'] = ttm4('revtq', fqsm)
 fqsm['cogsq4'] = ttm4('cogsq', fqsm)
-fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(12)
+fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(4)
 fqsm['gma'] = (fqsm['revtq4']-fqsm['cogsq4'])/fqsm['atq_l4']
 
 
 
 #grltnoa
-fqsm['rectq_l4'] = fqsm.groupby(['gvkey'])['rectq'].shift(12)
-fqsm['acoq_l4'] = fqsm.groupby(['gvkey'])['acoq'].shift(12)
-fqsm['apq_l4'] = fqsm.groupby(['gvkey'])['apq'].shift(12)
-fqsm['lcoq_l4'] = fqsm.groupby(['gvkey'])['lcoq'].shift(12)
-fqsm['loq_l4'] = fqsm.groupby(['gvkey'])['loq'].shift(12)
-fqsm['invtq_l4'] = fqsm.groupby(['gvkey'])['invtq'].shift(12)
-fqsm['ppentq_l4'] = fqsm.groupby(['gvkey'])['ppentq'].shift(12)
-fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(12)
+fqsm['rectq_l4'] = fqsm.groupby(['gvkey'])['rectq'].shift(4)
+fqsm['acoq_l4'] = fqsm.groupby(['gvkey'])['acoq'].shift(4)
+fqsm['apq_l4'] = fqsm.groupby(['gvkey'])['apq'].shift(4)
+fqsm['lcoq_l4'] = fqsm.groupby(['gvkey'])['lcoq'].shift(4)
+fqsm['loq_l4'] = fqsm.groupby(['gvkey'])['loq'].shift(4)
+fqsm['invtq_l4'] = fqsm.groupby(['gvkey'])['invtq'].shift(4)
+fqsm['ppentq_l4'] = fqsm.groupby(['gvkey'])['ppentq'].shift(4)
+fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(4)
 
 fqsm['grltnoa'] = ((fqsm['rectq']+fqsm['invtq']+fqsm['ppentq']+fqsm['acoq']+fqsm['intanq']+
                        fqsm['aoq']-fqsm['apq']-fqsm['lcoq']-fqsm['loq'])-
@@ -424,20 +428,20 @@ fqsm['grltnoa'] = ((fqsm['rectq']+fqsm['invtq']+fqsm['ppentq']+fqsm['acoq']+fqsm
 fqsm['lev'] = fqsm['ltq']/fqsm['me']
 
 #lgr
-fqsm['ltq_l4'] = fqsm.groupby(['gvkey'])['ltq'].shift(12)
+fqsm['ltq_l4'] = fqsm.groupby(['gvkey'])['ltq'].shift(4)
 fqsm['lgr'] = (fqsm['ltq']/fqsm['ltq_l4'])-1
 
 
 
 #nincr
-fqsm['ibq_l1'] = fqsm.groupby(['gvkey'])['ibq'].shift(3)
-fqsm['ibq_l2'] = fqsm.groupby(['gvkey'])['ibq'].shift(6)
-fqsm['ibq_l3'] = fqsm.groupby(['gvkey'])['ibq'].shift(9)
-fqsm['ibq_l4'] = fqsm.groupby(['gvkey'])['ibq'].shift(12)
-fqsm['ibq_l5'] = fqsm.groupby(['gvkey'])['ibq'].shift(15)
-fqsm['ibq_l6'] = fqsm.groupby(['gvkey'])['ibq'].shift(18)
-fqsm['ibq_l7'] = fqsm.groupby(['gvkey'])['ibq'].shift(21)
-fqsm['ibq_l8'] = fqsm.groupby(['gvkey'])['ibq'].shift(24)
+fqsm['ibq_l1'] = fqsm.groupby(['gvkey'])['ibq'].shift(1)
+fqsm['ibq_l2'] = fqsm.groupby(['gvkey'])['ibq'].shift(2)
+fqsm['ibq_l3'] = fqsm.groupby(['gvkey'])['ibq'].shift(3)
+fqsm['ibq_l4'] = fqsm.groupby(['gvkey'])['ibq'].shift(4)
+fqsm['ibq_l5'] = fqsm.groupby(['gvkey'])['ibq'].shift(5)
+fqsm['ibq_l6'] = fqsm.groupby(['gvkey'])['ibq'].shift(6)
+fqsm['ibq_l7'] = fqsm.groupby(['gvkey'])['ibq'].shift(7)
+fqsm['ibq_l8'] = fqsm.groupby(['gvkey'])['ibq'].shift(8)
 
 fqsm['nincr_temp1'] = np.where(fqsm['ibq'] > fqsm['ibq_l1'], 1, 0)
 fqsm['nincr_temp2'] = np.where(fqsm['ibq_l1'] > fqsm['ibq_l2'], 1, 0)
@@ -464,7 +468,7 @@ fqsm = fqsm.drop(['ibq_l1', 'ibq_l2', 'ibq_l3', 'ibq_l4', 'ibq_l5', 'ibq_l6', 'i
 
 
 #noa
-fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(12)
+fqsm['atq_l4'] = fqsm.groupby(['gvkey'])['atq'].shift(4)
 fqsm['ivaoq'] = np.where(fqsm['ivaoq'].isnull(), 0, 1)
 fqsm['dlcq'] = np.where(fqsm['dlcq'].isnull(), 0, 1)
 fqsm['dlttq'] = np.where(fqsm['dlttq'].isnull(), 0, 1)
@@ -479,41 +483,14 @@ fqsm['xintq0'] = np.where(fqsm['xintq'].isnull(), 0, fqsm['xintq'])
 fqsm['xsgaq0'] = np.where(fqsm['xsgaq'].isnull(), 0, fqsm['xsgaq'])
 fqsm['beq'] = np.where(fqsm['seqq']>0, fqsm['seqq']+0-fqsm['pstkq'], np.nan)
 fqsm['beq'] = np.where(fqsm['beq']<=0, np.nan, fqsm['beq'])
-fqsm['beq_l4'] = fqsm.groupby(['gvkey'])['beq'].shift(12)
+fqsm['beq_l4'] = fqsm.groupby(['gvkey'])['beq'].shift(4)
 fqsm['op'] = (ttm4('revtq', fqsm)-ttm4('cogsq', fqsm)-ttm4('xsgaq0', fqsm)-ttm4('xintq0', fqsm))/fqsm['beq_l4']
-
-###momentum####
-def mom(start, end, df):
-    """
-    :param start: Order of starting lag
-    :param end: Order of ending lag
-    :param df: Dataframe
-    :return: Momentum factor
-    """
-    lag = pd.DataFrame()
-    result = 1
-    for i in range(start, end):
-        lag['mom%s' % i] = df.groupby(['gvkey'])['retm'].shift(i)
-        result = result * (1+lag['mom%s' % i])
-    result = result - 1
-    return result
-
-
-
-
-fqsm['mom12m'] = mom(1,12,fqsm)
-fqsm['mom36m'] = mom(1,36,fqsm)
-fqsm['mom60m'] = mom(12,60,fqsm)
-fqsm['mom6m'] = mom(1,6,fqsm)
-fqsm['mom1m'] = fqsm.groupby(['gvkey'])['retm'].shift(1)
-
-
 
 
 #sgr
 fqsm['saleq4'] = ttm4('saleq', fqsm)
 fqsm['saleq4'] = np.where(fqsm['saleq4'].isnull(), fqsm['saley'], fqsm['saleq4'])
-fqsm['saleq4_l4'] = fqsm.groupby(['gvkey'])['saleq4'].shift(12)
+fqsm['saleq4_l4'] = fqsm.groupby(['gvkey'])['saleq4'].shift(4)
 fqsm['sgr'] = (fqsm['saleq4']/fqsm['saleq4_l4'])-1
 
 
@@ -521,14 +498,14 @@ fqsm['sgr'] = (fqsm['saleq4']/fqsm['saleq4_l4'])-1
 
 #ni
 # fqsm['sps'] = fqsm['cshoc'] * fqsm['ajexdi']
-# fqsm['sps_l1'] = fqsm.groupby('gvkey')['sps'].shift(3)
+# fqsm['sps_l1'] = fqsm.groupby('gvkey')['sps'].shift(1)
 # fqsm['ni'] = np.log(fqsm['sps']/fqsm['sps_l1'])
 
 
 
 
 #rna
-fqsm['noa_l4'] = fqsm.groupby(['gvkey'])['noa'].shift(12)
+fqsm['noa_l4'] = fqsm.groupby(['gvkey'])['noa'].shift(4)
 fqsm['rna'] = fqsm['oiadpq']/fqsm['noa_l4']
 
 
@@ -536,7 +513,7 @@ fqsm['rna'] = fqsm['oiadpq']/fqsm['noa_l4']
 
 
 #roa
-fqsm['atq_l1'] = fqsm.groupby(['gvkey'])['atq'].shift(3)
+fqsm['atq_l1'] = fqsm.groupby(['gvkey'])['atq'].shift(1)
 fqsm['roa'] = fqsm['ibq']/fqsm['atq_l1']
 
 
@@ -544,13 +521,13 @@ fqsm['roa'] = fqsm['ibq']/fqsm['atq_l1']
 
 
 #roe
-fqsm['ceqq_l1'] = fqsm.groupby(['gvkey'])['ceqq'].shift(3)
+fqsm['ceqq_l1'] = fqsm.groupby(['gvkey'])['ceqq'].shift(1)
 fqsm['roe'] = fqsm['ibq']/fqsm['ceqq_l1']
 
 
 
 #rsup
-fqsm['saleq_l4'] = fqsm.groupby(['gvkey'])['saleq'].shift(12)
+fqsm['saleq_l4'] = fqsm.groupby(['gvkey'])['saleq'].shift(4)
 fqsm['rsup'] = (fqsm['saleq'] - fqsm['saleq_l4'])/fqsm['me']
 
 
@@ -572,7 +549,7 @@ fqsm['acc'] = (fqsm['iby']-fqsm['oancfy'])/ttm4('atq',fqsm)
 
 
 # dy
-# fqsm['me_l1'] = fqsm.groupby(['gvkey'])['me'].shift(3)
+# fqsm['me_l1'] = fqsm.groupby(['gvkey'])['me'].shift(1)
 # fqsm['retdy'] = fqsm['retm'] - fqsm['retx']
 # fqsm['mdivpay'] = fqsm['retdy']*fqsm['me_l1']
 
@@ -599,11 +576,38 @@ from tqdm import tqdm
 
 fqsm['date'] = fqsm.groupby(['gvkey'])['jdate'].shift(-1)
 
-fqsm['datadate'] = fqsm.groupby(['gvkey'])['datadate_secm'].fillna(method='ffill')
-fqsm[['gvkey1', 'datadate1']] = fqsm[['gvkey', 'datadate']]  # avoid the bug of 'groupby' for py 3.8
-fqsm = fqsm.groupby(['gvkey1'], as_index=False).fillna(method='ffill')
+fqsm = pd.merge(secm[['retm','gvkey','jdate']], fqsm, how='left', on=['gvkey','jdate']) # secm can be changed to crsp_mom
+fqsm['datadate_secm'] = fqsm.groupby(['gvkey'])['datadate_secm'].fillna(method='ffill')
+fqsm[['gvkey1', 'datadate1']] = fqsm[['gvkey', 'datadate_secm']]  # avoid the bug of 'groupby' for py 3.8
+fqsm = fqsm.groupby(['gvkey1','datadate1'], as_index=False).fillna(method='ffill')
 
-# fqsm = fqsm.groupby(['gvkey','datadate_secm'], as_index=False).fillna(method='ffill')
+
+fqsm = fqsm.rename(columns={"retm_x": "retm"})
+###momentum####
+def mom(start, end, df):
+    """
+    :param start: Order of starting lag
+    :param end: Order of ending lag
+    :param df: Dataframe
+    :return: Momentum factor
+    """
+    lag = pd.DataFrame()
+    result = 1
+    for i in range(start, end):
+        lag['mom%s' % i] = df.groupby(['gvkey'])['retm'].shift(i)
+        result = result * (1+lag['mom%s' % i])
+    result = result - 1
+    return result
+
+
+
+fqsm['mom12m'] = mom(1,12,fqsm)
+fqsm['mom36m'] = mom(1,36,fqsm)
+fqsm['mom60m'] = mom(12,60,fqsm)
+fqsm['mom6m'] = mom(1,6,fqsm)
+fqsm['mom1m'] = fqsm.groupby(['gvkey'])['retm'].shift(1)
+
+
 
 def standardize(df):
     # exclude the the information columns
